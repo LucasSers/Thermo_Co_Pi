@@ -1,5 +1,3 @@
-package org.thermo_co;
-
 import java.net.*;
 import java.io.*;
 
@@ -12,7 +10,7 @@ import java.io.*;
 public class ClientAndroid {
 
 	public static void main(String[] args) {
-		
+
 		int portServeur;
 	    Socket socket;
 	    InetAddress iPserveur;
@@ -20,10 +18,11 @@ public class ClientAndroid {
 	    PrintWriter out;
 	    String requete;
 	    String reponse;
-	    
+        byte[] ipServeur = new byte[] { 127, 0, 0, 1 };
+
 	    try {
-	    	portServeur = 432;
-	    	iPserveur = InetAddress.getLocalHost();  //127.0.0.1
+	    	portServeur = 1111;
+            iPserveur = InetAddress.getByAddress("Localhost",ipServeur);
 
 	    	socket = new Socket(iPserveur, portServeur);
 	    	in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -35,13 +34,11 @@ public class ClientAndroid {
 			do {
 				reponse = in.readLine();
 				System.out.println(reponse);
-			} while(!reponse.equals("FIN"));
+			} while(!reponse.equals(null) || !reponse.equals("FIN"));
 
 	    } catch (Exception ex) {
-	    	System.out.println(ex.getMessage());
+	    	System.out.println("coucou"); //je passe dans l'exception wtf
 	    }
-
-
 	}
 
 }

@@ -12,6 +12,7 @@ L'application Android récupère ces relevés, les traite et affiche :
 * Les extremums des températures du jour actuel
 > (avec possibilité de changer d'unités)
 * Un graphique des relevés sur demande
+
 ## Membres de l'équipe
 
 + Dorian _PRODUCT OWNER_
@@ -19,11 +20,11 @@ L'application Android récupère ces relevés, les traite et affiche :
 + Lucas _SCRUM MASTER_
 + Valentin _DEVELOPPEUR_
 
-## Lien vers le board Zenhub (Android)
-https://app.zenhub.com/workspaces/thermo-co-pi-61a90875bd9c34001e8dc8b1/board
+## Lien vers le board Zenhub (Pi)
+https://app.zenhub.com/workspaces/thermo-co-pi-61a90875bd9c34001e8dc8b1/board?repos=433924399
 
 ## Lien vers le dossier Google Drive
 https://drive.google.com/drive/folders/12q8LObpDJC4tdu51sZCCLXz2jUl-ETXE
 
-## Lien vers le dépôt de l'application Raspberry Android
+## Lien vers le dépôt de l'application Android
 https://github.com/LucasSers/Thermo_Co_Android

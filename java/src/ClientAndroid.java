@@ -18,27 +18,32 @@ public class ClientAndroid {
 	    PrintWriter out;
 	    String requete;
 	    String reponse;
-        byte[] ipServeur = new byte[] { 127, 0, 0, 1 };
+       	String ip = "192.168.0.100";
 
 	    try {
 	    	portServeur = 1111;
-            iPserveur = InetAddress.getByAddress("Localhost",ipServeur);
+            iPserveur = InetAddress.getByName(ip);
 
 	    	socket = new Socket(iPserveur, portServeur);
 	    	in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 	    	out = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true);
 
-	    	requete="select * from releve";
+			// traitement de la requête
+	    	requete="select * from releve where instant > '2022-02-23 15:00:00'|50";
 	    	out.println(requete);
 
-			do {
-				reponse = in.readLine();
-				System.out.println(reponse);
-			} while(!reponse.equals(null) || !reponse.equals("FIN"));
+			// traitement de la réponse reçu
+			reponse = in.readLine();
+			System.out.println(reponse);
 
-	    } catch (Exception ex) {
-	    	System.out.println("coucou"); //je passe dans l'exception wtf
-	    }
+	    } catch (ConnectException ce) {
+			System.out.println("Erreur -> le serveur n'est pas lancé ou n'est pas trouvé");
+		} catch (SocketException se) {
+			System.out.println("Erreur -> le processus de votre connexion a été tué");
+		} catch (Exception ex) {
+			System.out.print("Erreur -> ");
+			System.out.println(ex);
+		}
 	}
 
 }

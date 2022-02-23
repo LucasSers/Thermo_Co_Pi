@@ -133,7 +133,7 @@ class ThreadDB(threading.Thread):
             number = 60 # intervalle par défaut si erreur
             try:
                 ligneInt = int(ligne)
-                if (ligneInt > 10): # 10 sec minimum
+                if (ligneInt >= 10): # 10 sec minimum
                     number = ligneInt
             except ValueError:
                 pass
@@ -149,7 +149,7 @@ class ThreadDB(threading.Thread):
             number = 60 # intervalle par défaut si erreur
             try:
                 ligneInt = int(entier)
-                if (ligneInt > 10): # 10 sec minimum
+                if (ligneInt >= 10): # 10 sec minimum
                     number = ligneInt
             except ValueError:
                 pass
@@ -178,9 +178,9 @@ class ThreadDB(threading.Thread):
             self.bd.close()
 
         while True:
-            self.intervalleChoisi = ThreadDB.intervalle(self)
+            self.intervalleChoisi = ThreadDB.intervalle()
             ThreadDB.writeDateTemp(self)
-            time.sleep(self.intervalleChoisi)
+            time.sleep(self.intervalleChoisi-1) # 1sec est le temps d'exécution du programme
 
 
 # ------------------------------------- MAIN -------------------------------

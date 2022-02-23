@@ -6,8 +6,7 @@
 # LucasSers
 
 from w1thermsensor import W1ThermSensor
-import datetime, time, os, sqlite3
-import socket, threading, sqlite3
+import datetime, time, socket, threading, sqlite3, re
 
 
 ##################################################################
@@ -47,7 +46,7 @@ class ThreadServer(threading.Thread):
             # Et l'autre pour l'intervalle de relevé (facultatif)
             try:
                 time = tbMsg[1]
-                ThreadDB.setIntervalle(time)
+                setIntervalle(time)
             except IndexError: # le tableau n'existe pas car le client n'a pas spécifié l'intervalle de relevé
                 pass
 
@@ -59,18 +58,18 @@ class ThreadServer(threading.Thread):
             for row in resultat:
                 reponse += row[1] + ";" + str(row[2]) + "|"
 
-            reponse += str(ThreadDB.intervalle())
+            reponse += str(intervalle())
             reponse += "/FIN"
             print(reponse)
 
             # envoi de la réponse
             self.socket.send(reponse.encode())
 
-            # fermeture des connexions
+            # fermeture des connexions et du thread
             print("Fermeture de %s sur le port %s" % (self.ip, self.port,))
             curseur.close()
             laConnexion.close()
-            self.socket.close()
+            self.socket.close() # =! shutdown
 
         except Exception as e:
             print(e)
@@ -88,25 +87,17 @@ class ThreadDB(threading.Thread):
     # et gère les erreurs de relevé
     def getTemp(self):
         tempCelsius = self.capteur.get_temperature()
-        while (ThreadDB.tempInvalide(tempCelsius)):
+        while (tempInvalide(tempCelsius)):
             print("Erreur! Température incohérente detectée lors du relevé")
             tempCelsius = self.capteur.get_temperature()
 
         tempCelsius = round(tempCelsius, 1)  # Arrondi au dixième
         return tempCelsius
 
-    # Extremums du capteur (documentation dans le drive)
-    def tempInvalide(tempC):
-        return ((tempC < -55.0) | (tempC > 125.0))
 
-    # Récupère la date courante au moment du relevé de température
-    def getTime():
-        return datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
-        # Inscrit la température et son instant de relevé dans la base de donnée
-
+    # Inscrit la température et son instant de relevé dans la base de donnée
     def writeDateTemp(self):
-        date = ThreadDB.getTime()
+        date = getTime()
         temp = ThreadDB.getTemp(self)
         data = {"dateActuelle": date, "tempActuelle": temp}
         toWrite = str(date) + " " + str(temp) + "\n"
@@ -122,38 +113,6 @@ class ThreadDB(threading.Thread):
             print("Erreur lors de l'inscription du relevé dans la table !")
             self.bd.rollback()
             erreur.getMessage()
-
-    # Lecture dans un fichier d'un nombre qui représente 
-    # l'intervalle de relevé en SECONDE
-    # retourne ce nombre
-    # gère les caractères fin de ligne et les erreurs de saisie 
-    def intervalle():
-        with open("intervalle.txt", "r", encoding='utf-8') as fichier:
-            ligne = fichier.readline().rstrip()
-            number = 60 # intervalle par défaut si erreur
-            try:
-                ligneInt = int(ligne)
-                if (ligneInt >= 10): # 10 sec minimum
-                    number = ligneInt
-            except ValueError:
-                pass
-            return number
-
-
-    # Ecriture dans un fichier d'un nombre qui représente
-    # l'intervalle de relevé en SECONDE
-    # choisit par l'utilisateur sur l'app Android
-    # gère les caractères fin de ligne et les erreurs de saisie
-    def setIntervalle(entier):
-        with open("intervalle.txt", "w", encoding='utf-8') as fichier:
-            number = 60 # intervalle par défaut si erreur
-            try:
-                ligneInt = int(entier)
-                if (ligneInt >= 10): # 10 sec minimum
-                    number = ligneInt
-            except ValueError:
-                pass
-            fichier.write(str(number))
 
 
     def __init__(self):
@@ -178,26 +137,108 @@ class ThreadDB(threading.Thread):
             self.bd.close()
 
         while True:
-            self.intervalleChoisi = ThreadDB.intervalle()
+            self.intervalleChoisi = intervalle()
             ThreadDB.writeDateTemp(self)
             time.sleep(self.intervalleChoisi-1) # 1sec est le temps d'exécution du programme
 
 
+##################################################################
+# METHODES OUTILS
+##################################################################
+# Extremums du capteur (documentation dans le drive)
+def tempInvalide(tempC):
+    return ((tempC < -55.0) | (tempC > 125.0))
+
+
+
+# Récupère la date courante au moment du relevé de température
+def getTime():
+    return datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+
+# Lecture dans un fichier d'une ip en str
+# retourne cette str
+# gère les caractères fin de ligne et les erreurs de saisie
+def ip():
+    with open("ip.txt", "r", encoding='utf-8') as fichier:
+        ligne = fichier.readline().rstrip()
+        addr = "127.0.0.1" # ip par défaut si erreur
+        ip = addr
+        ok = re.search("^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$", ligne)
+        if (ok): # si la ligne matche à la regex IPv4
+            ip = ligne
+        else:
+            setIp(ip)
+
+        return ip
+
+
+# Ecriture dans un fichier d'une ip en str
+# gère les caractères fin de ligne et les erreurs de saisie
+def setIp(chaine):
+    with open("ip.txt", "w", encoding='utf-8') as fichier:
+        addr = "127.0.0.1" # ip par défaut si erreur
+        ip = addr
+        ok = re.search("^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$", chaine)
+        if (ok): # si la chaine matche à la regex IPv4
+            ip = chaine
+
+        fichier.write(str(ip))
+
+
+
+# Lecture dans un fichier d'un nombre qui représente
+# l'intervalle de relevé en SECONDE
+# retourne ce nombre
+# gère les caractères fin de ligne et les erreurs de saisie
+def intervalle():
+    with open("intervalle.txt", "r", encoding='utf-8') as fichier:
+        ligne = fichier.readline().rstrip()
+        number = 60 # intervalle par défaut si erreur
+        try:
+            ligneInt = int(ligne)
+            if (ligneInt >= 10): # 10 sec minimum
+                number = ligneInt
+        except ValueError:
+            setIntervalle(number) # ecriture de la valeur par défaut pour lever l'erreur le prochain appel
+        return number
+
+
+
+# Ecriture dans un fichier d'un nombre qui représente
+# l'intervalle de relevé en SECONDE
+# choisit par l'utilisateur sur l'app Android
+# gère les erreurs de saisie
+def setIntervalle(entier):
+    with open("intervalle.txt", "w", encoding='utf-8') as fichier:
+        number = 60 # intervalle par défaut si erreur
+        try:
+            ligneInt = int(entier)
+            if (ligneInt >= 10): # 10 sec minimum
+                number = ligneInt
+        except ValueError:
+            pass
+        fichier.write(str(number))
+
+
+
 # ------------------------------------- MAIN -------------------------------
 
-HOST = '192.168.0.100'
+HOST = ip()
 PORT = 1111
 serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # création du socket
 try:
     serverSocket.bind((HOST, PORT))  # liaison du socket à une adresse précise
 except socket.error:
-    print("La liaison du socket à l'adresse choisie a échoué.")
+    print("La liaison du socket à l'adresse choisie a échouée.")
+    exit()
 
 try:
     serverSocket.listen()
     print("En écoute...\n")
 except socket.error:
     print("Impossible d'écouter sur le socket choisi")
+    exit()
 
 
 # thread permettant l'enregistrement des BD

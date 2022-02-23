@@ -21,7 +21,7 @@ class ThreadServer(threading.Thread):
         self.socket = clientSocket
         print("[+] Nouveau thread pour %s %s" % (self.ip, self.port,))
 
-    def run(self,):
+    def run(self):
         print("Connexion de %s sur le port %s" % (self.ip, self.port,))
         try:
             laConnexion = sqlite3.connect('releve.db')
@@ -38,7 +38,7 @@ class ThreadServer(threading.Thread):
             # traitement de la requête
             msg = requete.decode()
 
-            #analyse de la requete et scinde en 2 parties
+            # analyse de la requete et scinde en 2 parties
             tbMsg = msg.split("|")
 
             # Une pour la requete sql
@@ -46,8 +46,8 @@ class ThreadServer(threading.Thread):
             # Et l'autre pour l'intervalle de relevé (facultatif)
             try:
                 time = tbMsg[1]
-                setIntervalle(time)
-            except IndexError: # le tableau n'existe pas car le client n'a pas spécifié l'intervalle de relevé
+                set_intervalle(time)
+            except IndexError:  # le tableau n'existe pas car le client n'a pas spécifié l'intervalle de relevé
                 pass
 
             curseur.execute(sql)
@@ -58,7 +58,7 @@ class ThreadServer(threading.Thread):
             for row in resultat:
                 reponse += row[1] + ";" + str(row[2]) + "|"
 
-            reponse += str(intervalle())
+            reponse += str(get_intervalle())
             reponse += "/FIN"
             print(reponse)
 
@@ -69,13 +69,12 @@ class ThreadServer(threading.Thread):
             print("Fermeture de %s sur le port %s" % (self.ip, self.port,))
             curseur.close()
             laConnexion.close()
-            self.socket.close() # =! shutdown
+            self.socket.close()  # =! shutdown
 
         except Exception as e:
             print(e)
             # fermeture de la connexion
             self.socket.close()
-
 
 
 ##################################################################
@@ -93,7 +92,6 @@ class ThreadDB(threading.Thread):
 
         tempCelsius = round(tempCelsius, 1)  # Arrondi au dixième
         return tempCelsius
-
 
     # Inscrit la température et son instant de relevé dans la base de donnée
     def writeDateTemp(self):
@@ -113,7 +111,6 @@ class ThreadDB(threading.Thread):
             print("Erreur lors de l'inscription du relevé dans la table !")
             self.bd.rollback()
             erreur.getMessage()
-
 
     def __init__(self):
         threading.Thread.__init__(self)
@@ -137,9 +134,9 @@ class ThreadDB(threading.Thread):
             self.bd.close()
 
         while True:
-            self.intervalleChoisi = intervalle()
+            self.intervalleChoisi = get_intervalle()
             ThreadDB.writeDateTemp(self)
-            time.sleep(self.intervalleChoisi-1) # 1sec est le temps d'exécution du programme
+            time.sleep(self.intervalleChoisi - 1)  # 1sec est le temps d'exécution du programme
 
 
 ##################################################################
@@ -150,7 +147,6 @@ def tempInvalide(tempC):
     return ((tempC < -55.0) | (tempC > 125.0))
 
 
-
 # Récupère la date courante au moment du relevé de température
 def getTime():
     return datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -159,72 +155,85 @@ def getTime():
 # Lecture dans un fichier d'une ip en str
 # retourne cette str
 # gère les caractères fin de ligne et les erreurs de saisie
-def ip():
+def get_ip():
     with open("ip.txt", "r", encoding='utf-8') as fichier:
         ligne = fichier.readline().rstrip()
-        addr = "127.0.0.1" # ip par défaut si erreur
+        addr = get_currentip()  # ip par défaut si erreur de saisie
         ip = addr
-        ok = re.search("^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$", ligne)
-        if (ok): # si la ligne matche à la regex IPv4
+        ok = re.search("^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$", ligne) # si la ligne matche à la regex IPv4
+        if (ok):
             ip = ligne
         else:
-            setIp(ip)
+            set_ip(ip)
 
         return ip
 
 
 # Ecriture dans un fichier d'une ip en str
-# gère les caractères fin de ligne et les erreurs de saisie
-def setIp(chaine):
+# gère les erreurs de saisie
+def set_ip(chaine):
     with open("ip.txt", "w", encoding='utf-8') as fichier:
-        addr = "127.0.0.1" # ip par défaut si erreur
+        addr = get_currentip()  # ip par défaut si erreur de saisie
         ip = addr
-        ok = re.search("^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$", chaine)
-        if (ok): # si la chaine matche à la regex IPv4
+        ok = re.search("^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$", chaine) # si la chaine matche à la regex IPv4
+        if (ok):
             ip = chaine
 
         fichier.write(str(ip))
 
+
+# Permet de récupérer l'adresse ip affectée localement par le routeur
+# et l'affecte par défaut au serveur si la lecture du fichier n'a pas pu aboutir
+def get_currentip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.settimeout(0)
+    try:
+        # n'a même pas besoin d'être joignable
+        s.connect(('10.255.255.255', 1))
+        IP = s.getsockname()[0]
+    except Exception:
+        IP = '127.0.0.1'
+    finally:
+        s.close()
+    return IP
 
 
 # Lecture dans un fichier d'un nombre qui représente
 # l'intervalle de relevé en SECONDE
 # retourne ce nombre
 # gère les caractères fin de ligne et les erreurs de saisie
-def intervalle():
+def get_intervalle():
     with open("intervalle.txt", "r", encoding='utf-8') as fichier:
         ligne = fichier.readline().rstrip()
-        number = 60 # intervalle par défaut si erreur
+        number = 60  # intervalle par défaut si erreur
         try:
             ligneInt = int(ligne)
-            if (ligneInt >= 10): # 10 sec minimum
+            if (ligneInt >= 10):  # 10 sec minimum
                 number = ligneInt
         except ValueError:
-            setIntervalle(number) # ecriture de la valeur par défaut pour lever l'erreur le prochain appel
+            set_intervalle(number)  # ecriture de la valeur par défaut pour lever l'erreur le prochain appel
         return number
-
 
 
 # Ecriture dans un fichier d'un nombre qui représente
 # l'intervalle de relevé en SECONDE
 # choisit par l'utilisateur sur l'app Android
 # gère les erreurs de saisie
-def setIntervalle(entier):
+def set_intervalle(entier):
     with open("intervalle.txt", "w", encoding='utf-8') as fichier:
-        number = 60 # intervalle par défaut si erreur
+        number = 60  # intervalle par défaut si erreur
         try:
             ligneInt = int(entier)
-            if (ligneInt >= 10): # 10 sec minimum
+            if (ligneInt >= 10):  # 10 sec minimum
                 number = ligneInt
         except ValueError:
             pass
         fichier.write(str(number))
 
 
-
 # ------------------------------------- MAIN -------------------------------
 
-HOST = ip()
+HOST = get_ip()
 PORT = 1111
 serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # création du socket
 try:
@@ -240,11 +249,9 @@ except socket.error:
     print("Impossible d'écouter sur le socket choisi")
     exit()
 
-
 # thread permettant l'enregistrement des BD
 thread1DB = ThreadDB()
 thread1DB.start()
-
 
 while True:
     (clientSocket, info) = serverSocket.accept()

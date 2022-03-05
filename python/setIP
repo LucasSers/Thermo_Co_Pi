@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# Permet de régler manuellement une adresse IP static 
+# sur un raspberry Pi
+
+echo "Programme permettant de modifier l'adresse IP"
+echo "A la fin de l'opération le Raspberry Pi redémarrera automatiquement"
+echo " "
+
+while :
+do
+read -p "Saisissez la nouvelle adresse IP : " newIP
+if [[ $newIP =~ ^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$  ]]
+then
+oldIP=$(hostname -I) # attention retourne l'adresse IP suivi d'un mechant petit espace à la fin!
+oldIP="${oldIP// }"  # supprime le caractère espace à la fin
+sudo sed -i -e "s/$oldIP/$newIP/g" /etc/dhcpcd.conf
+sudo reboot
+else
+echo "Veuillez saisir une adresse IPv4 conforme !"
+fi
+done
+
+

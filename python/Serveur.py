@@ -6,8 +6,7 @@
 # LucasSers
 
 from w1thermsensor import W1ThermSensor
-import datetime, time, socket, threading, sqlite3, re
-
+import datetime, time, socket, threading, sqlite3, shutil, os
 
 ##################################################################
 # PARTIE SERVEUR
@@ -95,22 +94,30 @@ class ThreadDB(threading.Thread):
 
     # Inscrit la température et son instant de relevé dans la base de donnée
     def writeDateTemp(self):
-        date = getTime()
-        temp = ThreadDB.getTemp(self)
-        data = {"dateActuelle": date, "tempActuelle": temp}
-        toWrite = str(date) + " " + str(temp) + "\n"
-        print("Relevé de température en cours toutes les ", self.intervalleChoisi, " secondes ...")
-        print("Inscription dans la base de donée => ", toWrite)
-        try:
-            self.curseur.execute(""" 
-                        INSERT INTO releve(instant, temperature)
-                        VALUES(:dateActuelle, :tempActuelle)
-                        """, data)
-            self.bd.commit()
-        except Exception as erreur:
-            print("Erreur lors de l'inscription du relevé dans la table !")
-            self.bd.rollback()
-            erreur.getMessage()
+        total, used, free = shutil.disk_usage("/");
+        if (free > 500000000) : # = 5Mo
+            date = getTime()
+            temp = ThreadDB.getTemp(self)
+            data = {"dateActuelle": date, "tempActuelle": temp}
+            toWrite = str(date) + " " + str(temp) + "\n"
+            print("Relevé de température en cours toutes les ", self.intervalleChoisi, " secondes ...")
+            print("Inscription dans la base de donée => ", toWrite)
+            try:
+                self.curseur.execute(""" 
+                            INSERT INTO releve(instant, temperature)
+                            VALUES(:dateActuelle, :tempActuelle)
+                            """, data)
+                self.bd.commit()
+            except Exception as erreur:
+                print("Erreur lors de l'inscription du relevé dans la table !")
+                self.bd.rollback()
+                erreur.getMessage()
+        else :
+            self.bd.close()
+            os.remove("releve.db")
+            print ("Espace disque insuffisant, fichier des relevés supprimé")
+            thread1DB.start()
+            self.close()
 
     def __init__(self):
         threading.Thread.__init__(self)
@@ -152,38 +159,8 @@ def getTime():
     return datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 
-# Lecture dans un fichier d'une ip en str
-# retourne cette str
-# gère les caractères fin de ligne et les erreurs de saisie
-def get_ip():
-    with open("ip.txt", "r", encoding='utf-8') as fichier:
-        ligne = fichier.readline().rstrip()
-        addr = get_currentip()  # ip par défaut si erreur de saisie
-        ip = addr
-        ok = re.search("^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$", ligne) # si la ligne matche à la regex IPv4
-        if (ok):
-            ip = ligne
-        else:
-            set_ip(ip)
-
-        return ip
-
-
-# Ecriture dans un fichier d'une ip en str
-# gère les erreurs de saisie
-def set_ip(chaine):
-    with open("ip.txt", "w", encoding='utf-8') as fichier:
-        addr = get_currentip()  # ip par défaut si erreur de saisie
-        ip = addr
-        ok = re.search("^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$", chaine) # si la chaine matche à la regex IPv4
-        if (ok):
-            ip = chaine
-
-        fichier.write(str(ip))
-
-
-# Permet de récupérer l'adresse ip affectée localement par le routeur
-# et l'affecte par défaut au serveur si la lecture du fichier n'a pas pu aboutir
+# Permet de récupérer l'adresse ip du raspberry pi
+# celle ci est static et est défini dans le fichier /etc/dhcpcd.conf
 def get_currentip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.settimeout(0)
@@ -203,12 +180,17 @@ def get_currentip():
 # retourne ce nombre
 # gère les caractères fin de ligne et les erreurs de saisie
 def get_intervalle():
-    with open("intervalle.txt", "r", encoding='utf-8') as fichier:
-        ligne = fichier.readline().rstrip()
+    with open("intervalle.txt", "a", encoding='utf-8') as fichier:
         number = 60  # intervalle par défaut si erreur
+        try :
+            ligne = fichier.readline().rstrip()
+        except Exception:
+            set_intervalle(number)
+            ligne = number
+            
         try:
             ligneInt = int(ligne)
-            if (ligneInt >= 10):  # 10 sec minimum
+            if (ligneInt >= 60):  # 60 sec minimum
                 number = ligneInt
         except ValueError:
             set_intervalle(number)  # ecriture de la valeur par défaut pour lever l'erreur le prochain appel
@@ -220,11 +202,11 @@ def get_intervalle():
 # choisit par l'utilisateur sur l'app Android
 # gère les erreurs de saisie
 def set_intervalle(entier):
-    with open("intervalle.txt", "w", encoding='utf-8') as fichier:
+    with open("intervalle.txt", "a", encoding='utf-8') as fichier:
         number = 60  # intervalle par défaut si erreur
         try:
             ligneInt = int(entier)
-            if (ligneInt >= 10):  # 10 sec minimum
+            if (ligneInt >= 60):  # 60 sec minimum
                 number = ligneInt
         except ValueError:
             pass
@@ -233,7 +215,7 @@ def set_intervalle(entier):
 
 # ------------------------------------- MAIN -------------------------------
 
-HOST = get_ip()
+HOST = get_currentip()
 PORT = 1111
 serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # création du socket
 try:

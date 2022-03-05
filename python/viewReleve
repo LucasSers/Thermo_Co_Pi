@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# Permet de visualiser les relevés contenu dans la base de donnée
+
+sqlite3 releve.db "SELECT * FROM releve"
+
+
+

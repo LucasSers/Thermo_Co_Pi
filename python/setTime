@@ -1,17 +1,11 @@
 #!/bin/bash
-
 # Permet de régler manuellement la date et l'heure 
 # sur un raspberry Pi
-
 read -p "Saisir une année : " a;
 read -p "Saisir un mois : " m;
 read -p "Saisir un jour : " j;
-
 read -p "Saisir les heures : " h;
 read -p "Saisir les minutes : " min;
 read -p "Saisir les secondes: " s;
-
 echo "La date actuelle est : ";
 sudo date -s "$a-$m-$j $h:$min:$s";
-
-

@@ -95,13 +95,13 @@ class ThreadDB(threading.Thread):
     # Inscrit la température et son instant de relevé dans la base de donnée
     def writeDateTemp(self):
         total, used, free = shutil.disk_usage("/");
-        if (free > 500000000) : # = 5Mo
+        if (free > 500000000) : 
             date = getTime()
             temp = ThreadDB.getTemp(self)
             data = {"dateActuelle": date, "tempActuelle": temp}
             toWrite = str(date) + " " + str(temp) + "\n"
             print("Relevé de température en cours toutes les ", self.intervalleChoisi, " secondes ...")
-            print("Inscription dans la base de donée => ", toWrite)
+            print("Inscription dans la base de donnée => ", toWrite)
             try:
                 self.curseur.execute(""" 
                             INSERT INTO releve(instant, temperature)
@@ -116,16 +116,40 @@ class ThreadDB(threading.Thread):
             self.bd.close()
             os.remove("releve.db")
             print ("Espace disque insuffisant, fichier des relevés supprimé")
-            thread1DB.start()
-            self.close()
-
+            try:
+                self.bd = sqlite3.connect('releve.db',
+                                  check_same_thread=False)  # Ouverture de de la connexion à la base de donnée
+                self.curseur = self.bd.cursor()  # Création d'un objet cursor pour executer des instructions SQLite    
+            except sqlite3.Error as error:
+                self.bd.close()
+                self.cursor.close()
+                print("Erreur lors de la connexion à SQLite", error)
+            try:
+                self.curseur.execute(""" CREATE TABLE IF NOT EXISTS releve(
+                                    id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                                    instant DATETIME NOT NULL, 
+                                    temperature NUMERIC NOT NULL); """)
+                self.bd.commit()
+            except Exception as e:
+                print("Erreur lors de l'initialisation de la Base de Donnée")
+                self.bd.rollback()
+                e.getMessage()
+                self.bd.close()
+          
+            
+        
     def __init__(self):
         threading.Thread.__init__(self)
         self.capteur = W1ThermSensor()
         self.intervalleChoisi = 60
-        self.bd = sqlite3.connect('releve.db',
+        try :
+            self.bd = sqlite3.connect('releve.db',
                                   check_same_thread=False)  # Ouverture de de la connexion à la base de donnée
-        self.curseur = self.bd.cursor()  # Création d'un objet cursor pour executer des instructions SQLite
+            self.curseur = self.bd.cursor()  # Création d'un objet cursor pour executer des instructions SQLite
+        except sqlite3.Error as error:
+                self.bd.close()
+                self.cursor.close()
+                print("Erreur lors de la connexion à SQLite", error)
 
     def run(self):
         try:
@@ -182,7 +206,7 @@ def get_currentip():
 def get_intervalle():
     with open("intervalle.txt", "r", encoding='utf-8') as fichier:
         number = 60  # intervalle par défaut si erreur
-        try:
+        try :
             ligne = fichier.readline().rstrip()
         except Exception:
             set_intervalle(number)

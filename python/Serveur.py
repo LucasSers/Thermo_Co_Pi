@@ -180,9 +180,9 @@ def get_currentip():
 # retourne ce nombre
 # gère les caractères fin de ligne et les erreurs de saisie
 def get_intervalle():
-    with open("intervalle.txt", "a", encoding='utf-8') as fichier:
+    with open("intervalle.txt", "r", encoding='utf-8') as fichier:
         number = 60  # intervalle par défaut si erreur
-        try :
+        try:
             ligne = fichier.readline().rstrip()
         except Exception:
             set_intervalle(number)
@@ -202,7 +202,7 @@ def get_intervalle():
 # choisit par l'utilisateur sur l'app Android
 # gère les erreurs de saisie
 def set_intervalle(entier):
-    with open("intervalle.txt", "a", encoding='utf-8') as fichier:
+    with open("intervalle.txt", "w+", encoding='utf-8') as fichier:
         number = 60  # intervalle par défaut si erreur
         try:
             ligneInt = int(entier)

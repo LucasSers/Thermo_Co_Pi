@@ -94,7 +94,7 @@ class ThreadDB(threading.Thread):
 
     # Inscrit la température et son instant de relevé dans la base de donnée
     def writeDateTemp(self):
-        total, used, free = shutil.disk_usage("/");
+        total, used, free = shutil.disk_usage("/")
         if (free > 500000000) : 
             date = getTime()
             temp = ThreadDB.getTemp(self)
@@ -206,7 +206,7 @@ def get_currentip():
 def get_intervalle():
     with open("intervalle.txt", "r", encoding='utf-8') as fichier:
         number = 60  # intervalle par défaut si erreur
-        try :
+        try:
             ligne = fichier.readline().rstrip()
         except Exception:
             set_intervalle(number)

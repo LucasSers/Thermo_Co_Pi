@@ -21,7 +21,7 @@ class ThreadServer(threading.Thread):
         print("[+] Nouveau thread pour %s %s" % (self.ip, self.port,))
 
     def run(self):
-        print("Connexion de %s sur le port %s à %s" % (self.ip, self.port, getTime(), datetime.datetime.now().time().strftime('%H:%M:%S')))
+        print("Connexion de %s sur le port %s à %s" % (self.ip, self.port, str(datetime.datetime.now().time().strftime('%H:%M:%S'))))
         try:
             laConnexion = sqlite3.connect('releve.db')
             curseur = laConnexion.cursor()
@@ -178,6 +178,7 @@ class ThreadDB(threading.Thread):
                             id INTEGER PRIMARY KEY AUTOINCREMENT, 
                             instant DATETIME NOT NULL, 
                             temperature NUMERIC NOT NULL); """)
+
             self.bd.commit()
         except Exception as e:
             print("Erreur lors de l'initialisation de la Base de Donnée")

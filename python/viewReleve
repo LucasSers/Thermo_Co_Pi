@@ -1,8 +1,10 @@
 #!/bin/bash
 
 # Permet de visualiser les relevés contenu dans la base de donnée
-
+cd ~
+cd Documents/s4
 sqlite3 releve.db "SELECT * FROM releve"
+sleep 500000000000000 #evite que le programme se referme
 
 
 

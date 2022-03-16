@@ -9,3 +9,4 @@ read -p "Saisir les minutes : " min;
 read -p "Saisir les secondes: " s;
 echo "La date actuelle est : ";
 sudo date -s "$a-$m-$j $h:$min:$s";
+sleep 25 

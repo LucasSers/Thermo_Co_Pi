@@ -1,0 +1,5 @@
+#!/bin/bash
+
+cd ~
+cd Documents/s4
+python3 Serveur.py

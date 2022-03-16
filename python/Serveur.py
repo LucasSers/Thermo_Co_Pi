@@ -21,14 +21,35 @@ class ThreadServer(threading.Thread):
         print("[+] Nouveau thread pour %s %s" % (self.ip, self.port,))
 
     def run(self):
-        print("Connexion de %s sur le port %s" % (self.ip, self.port,))
+        print("Connexion de %s sur le port %s à %s" % (self.ip, self.port, getTime(), datetime.datetime.now().time().strftime('%H:%M:%S')))
         try:
             laConnexion = sqlite3.connect('releve.db')
             curseur = laConnexion.cursor()
-        except sqlite3.Error as error:
+        except sqlite3.Error as error: # erreur lors de la première initialisation de la BD, on la supprime on essaye d'en re-créer une
             print("Erreur lors de la connexion à SQLite", error)
             curseur.close()
             laConnexion.close()
+            self.bd.close()
+            os.remove("releve.db")
+            try: 
+                self.bd = sqlite3.connect('releve.db',
+                                  check_same_thread=False)  # Ouverture de de la connexion à la base de donnée
+                self.curseur = self.bd.cursor()  # Création d'un objet cursor pour executer des instructions SQLite    
+            except sqlite3.Error as error:
+                self.bd.close()
+                self.cursor.close()
+                print("Erreur lors de la connexion à SQLite", error)
+            try:
+                self.curseur.execute(""" CREATE TABLE IF NOT EXISTS releve(
+                                    id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                                    instant DATETIME NOT NULL, 
+                                    temperature NUMERIC NOT NULL); """)
+                self.bd.commit()
+            except Exception as e:
+                print("Erreur lors de l'initialisation de la Base de Donnée")
+                self.bd.rollback()
+                e.getMessage()
+                self.bd.close()
 
         try:
             # réception de la requête
@@ -65,7 +86,7 @@ class ThreadServer(threading.Thread):
             self.socket.send(reponse.encode())
 
             # fermeture des connexions et du thread
-            print("Fermeture de %s sur le port %s" % (self.ip, self.port,))
+            print("Fermeture de %s sur le port %s à %s" % (self.ip, self.port, datetime.datetime.now().time().strftime('%H:%M:%S')))
             curseur.close()
             laConnexion.close()
             self.socket.close()  # =! shutdown
@@ -94,7 +115,7 @@ class ThreadDB(threading.Thread):
 
     # Inscrit la température et son instant de relevé dans la base de donnée
     def writeDateTemp(self):
-        total, used, free = shutil.disk_usage("/")
+        total, used, free = shutil.disk_usage("/");
         if (free > 500000000) : 
             date = getTime()
             temp = ThreadDB.getTemp(self)
@@ -204,9 +225,12 @@ def get_currentip():
 # retourne ce nombre
 # gère les caractères fin de ligne et les erreurs de saisie
 def get_intervalle():
-    with open("intervalle.txt", "r", encoding='utf-8') as fichier:
-        number = 60  # intervalle par défaut si erreur
-        try:
+    MIN = 60
+    MAX = 1000
+    number = MIN  # intervalle par défaut si erreur
+    try :
+        fichier = open("intervalle.txt", "r", encoding='utf-8')
+        try :
             ligne = fichier.readline().rstrip()
         except Exception:
             set_intervalle(number)
@@ -214,11 +238,16 @@ def get_intervalle():
             
         try:
             ligneInt = int(ligne)
-            if (ligneInt >= 60):  # 60 sec minimum
+            if (ligneInt >= MIN & ligneInt <= MAX):  # 60 sec minimum et 1000 sec maximum
                 number = ligneInt
         except ValueError:
             set_intervalle(number)  # ecriture de la valeur par défaut pour lever l'erreur le prochain appel
         return number
+        fichier.close()
+    except Exception:
+        set_intervalle(number) # ecriture de la valeur par défaut pour lever l'erreur le prochain appel
+        return number
+        
 
 
 # Ecriture dans un fichier d'un nombre qui représente
@@ -226,11 +255,13 @@ def get_intervalle():
 # choisit par l'utilisateur sur l'app Android
 # gère les erreurs de saisie
 def set_intervalle(entier):
+    MIN = 60
+    MAX = 1000
     with open("intervalle.txt", "w+", encoding='utf-8') as fichier:
-        number = 60  # intervalle par défaut si erreur
+        number = MIN  # intervalle par défaut si erreur
         try:
             ligneInt = int(entier)
-            if (ligneInt >= 60):  # 60 sec minimum
+            if (ligneInt >= MIN & ligneInt <= MAX):  # 60 sec minimum et 1000 sec maximum
                 number = ligneInt
         except ValueError:
             pass

@@ -115,7 +115,7 @@ class ThreadDB(threading.Thread):
 
     # Inscrit la température et son instant de relevé dans la base de donnée
     def writeDateTemp(self):
-        total, used, free = shutil.disk_usage("/");
+        total, used, free = shutil.disk_usage("/")
         if (free > 500000000) : 
             date = getTime()
             temp = ThreadDB.getTemp(self)
@@ -226,8 +226,6 @@ def get_currentip():
 # retourne ce nombre
 # gère les caractères fin de ligne et les erreurs de saisie
 def get_intervalle():
-    MIN = 60
-    MAX = 1000
     number = MIN  # intervalle par défaut si erreur
     try :
         fichier = open("intervalle.txt", "r", encoding='utf-8')
@@ -256,8 +254,6 @@ def get_intervalle():
 # choisit par l'utilisateur sur l'app Android
 # gère les erreurs de saisie
 def set_intervalle(entier):
-    MIN = 60
-    MAX = 1000
     with open("intervalle.txt", "w+", encoding='utf-8') as fichier:
         number = MIN  # intervalle par défaut si erreur
         try:
@@ -270,7 +266,8 @@ def set_intervalle(entier):
 
 
 # ------------------------------------- MAIN -------------------------------
-
+MIN = 60
+MAX = 1000
 HOST = get_currentip()
 PORT = 1111
 serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # création du socket

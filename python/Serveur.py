@@ -162,7 +162,7 @@ class ThreadDB(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
         self.capteur = W1ThermSensor()
-        self.intervalleChoisi = 60
+        self.intervalleChoisi = MIN
         try :
             self.bd = sqlite3.connect('releve.db',
                                   check_same_thread=False)  # Ouverture de de la connexion à la base de donnée
@@ -237,7 +237,7 @@ def get_intervalle():
             
         try:
             ligneInt = int(ligne)
-            if (ligneInt >= MIN & ligneInt <= MAX):  # 60 sec minimum et 1000 sec maximum
+            if MIN <= ligneInt & ligneInt <= MAX:  # 60 sec minimum et 1000 sec maximum
                 number = ligneInt
         except ValueError:
             set_intervalle(number)  # ecriture de la valeur par défaut pour lever l'erreur le prochain appel
@@ -258,7 +258,7 @@ def set_intervalle(entier):
         number = MIN  # intervalle par défaut si erreur
         try:
             ligneInt = int(entier)
-            if (ligneInt >= MIN & ligneInt <= MAX):  # 60 sec minimum et 1000 sec maximum
+            if MIN <= ligneInt & ligneInt <= MAX:  # 60 sec minimum et 1000 sec maximum
                 number = ligneInt
         except ValueError:
             pass
